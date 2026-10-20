@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POPCROWN TD ～精霊樹海とぷるぷるスライム防衛戦～</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=M+PLUS+Rounded+1c:wght@500;700;800&family=JetBrains+Mono:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app-shell">
+      <!-- Top HUD Bar -->
+      <header id="top-hud">
+        <div class="hud-left">
+          <button id="btn-stage-select" class="hud-pill-btn" title="ステージ選択・タイトルへ">
+            🗺️ <span id="hud-map-name">陽だまりのエメラルド樹海</span>
+          </button>
+          <div class="stat-badge lives-badge" title="王国ライフ">
+            <span class="stat-icon">❤️</span>
+            <span id="hud-lives" class="stat-value">25</span>
+          </div>
+          <div class="stat-badge gold-badge" title="所持ゴールド">
+            <span class="stat-icon">🪙</span>
+            <span id="hud-gold" class="stat-value">360</span>
+          </div>
+          <div class="stat-badge wave-badge" title="現在のウェーブ">
+            <span class="wave-label">WAVE</span>
+            <span id="hud-wave" class="stat-value">0 / 15</span>
+          </div>
+        </div>
+
+        <!-- Upcoming Wave Preview Strip -->
+        <div id="wave-preview-box" title="次のウェーブに出現する敵編成">
+          <span class="preview-label">次波予告:</span>
+          <div id="wave-preview-icons"></div>
+        </div>
+
+        <div class="hud-right">
+          <div class="speed-group">
+            <button id="btn-speed" class="hud-icon-btn" title="ゲーム速度切替 (1x / 2x / 3x)">
+              ⏩ <span id="speed-label">1x</span>
+            </button>
+            <button id="btn-autowave" class="hud-icon-btn" title="ウェーブ自動開始 ON/OFF">
+              🔄 <span id="autowave-label">自動:OFF</span>
+            </button>
+            <button id="btn-pause" class="hud-icon-btn" title="一時停止">⏸️</button>
+          </div>
+
+          <div class="audio-group">
+            <button id="btn-codex" class="hud-icon-btn" title="タワー＆モンスター図鑑">
+              📖 図鑑
+            </button>
+            <button id="btn-sfx" class="hud-icon-btn active" title="効果音 ON/OFF">🔊</button>
+            <button id="btn-bgm" class="hud-icon-btn active" title="BGM ON/OFF">🎵</button>
+          </div>
+
+          <button id="btn-start-wave" class="cta-wave-btn">
+            ⚔️ ウェーブ開始 <span class="hotkey-hint">[SPACE]</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Viewport Container -->
+      <main id="viewport-container">
+        <div id="canvas-wrapper">
+          <canvas id="game-canvas" width="1100" height="680"></canvas>
+
+          <!-- Center Wave Announcement Banner -->
+          <div id="wave-banner" class="hidden">
+            <div class="banner-wave-num" id="banner-title">WAVE 1</div>
+            <div class="banner-wave-sub" id="banner-subtitle">第1波：森の小さな斥候たち</div>
+          </div>
+
+          <!-- Action Mode Hint Banner (Placing Tower / Rally / Spell) -->
+          <div id="action-hint-banner" class="hidden">
+            <span id="action-hint-text">配置する場所をクリックしてください（右クリックまたはESCでキャンセル）</span>
+            <button id="btn-cancel-action" class="mini-cancel-btn">✖ キャンセル</button>
+          </div>
+
+          <!-- Floating Right Inspector Panel (When a Tower is Selected) -->
+          <aside id="inspector-panel" class="hidden">
+            <div class="inspector-header">
+              <canvas id="inspector-icon" width="54" height="54"></canvas>
+              <div class="inspector-title-col">
+                <div class="inspector-name-row">
+                  <h3 id="inspector-name">シルヴァン弓兵塔</h3>
+                  <button id="btn-close-inspector" class="close-x-btn" title="閉じる (ESC)">✕</button>
+                </div>
+                <div id="inspector-tier-badge" class="tier-pill">Tier 0 基本形態</div>
+              </div>
+            </div>
+
+            <div id="inspector-buffs" class="inspector-buff-row"></div>
+
+            <div class="inspector-stats-grid">
+              <div class="mini-stat">
+                <span class="ms-label">攻撃力</span>
+                <span class="ms-val" id="ins-dmg">18</span>
+              </div>
+              <div class="mini-stat">
+                <span class="ms-label">発射間隔</span>
+                <span class="ms-val" id="ins-cd">0.58s</span>
+              </div>
+              <div class="mini-stat">
+                <span class="ms-label">射程</span>
+                <span class="ms-val" id="ins-rng">165</span>
+              </div>
+              <div class="mini-stat">
+                <span class="ms-label">与ダメ / 撃破</span>
+                <span class="ms-val" id="ins-kills">0 / 0</span>
+              </div>
+            </div>
+
+            <!-- Target Priority & Rally Controls -->
+            <div class="inspector-controls-row">
+              <button id="btn-priority" class="tactical-btn">
+                🎯 狙い: <strong id="priority-label">先頭優先</strong>
+              </button>
+              <button id="btn-rally" class="tactical-btn rally-btn hidden">
+                🚩 集合地点変更
+              </button>
+            </div>
+
+            <!-- Upgrades Container -->
+            <div id="inspector-upgrades" class="upgrades-container"></div>
+
+            <!-- Sell Button -->
+            <div class="inspector-footer">
+              <button id="btn-sell-tower" class="sell-btn">
+                💰 タワー売却 (<span id="sell-refund">+75G</span>)
+              </button>
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      <!-- Bottom Dock: Commander Spells (Left) + Tower Build Cards (Center/Right) -->
+      <footer id="bottom-dock">
+        <div class="spells-dock">
+          <div class="dock-section-title">COMMANDER SPELLS</div>
+          <div class="spells-row">
+            <button id="spell-meteor" class="spell-btn" title="指定地点に6発の隕石を落とし大ダメージ＋炎上エリア生成 (キー: Q)">
+              <div class="spell-icon">☄️</div>
+              <div class="spell-info">
+                <span class="spell-name">メテオ雨</span>
+                <span class="spell-status" id="spell-meteor-cd">READY</span>
+              </div>
+              <span class="key-badge">Q</span>
+              <div class="spell-cooldown-overlay" id="spell-meteor-overlay"></div>
+            </button>
+
+            <button id="spell-chrono" class="spell-btn" title="画面内の全敵を3.5秒氷結させ、全タワーの攻撃速度を6秒間+35%加速！(キー: W)">
+              <div class="spell-icon">❄️</div>
+              <div class="spell-info">
+                <span class="spell-name">クロノ氷結</span>
+                <span class="spell-status" id="spell-chrono-cd">READY</span>
+              </div>
+              <span class="key-badge">W</span>
+              <div class="spell-cooldown-overlay" id="spell-chrono-overlay"></div>
+            </button>
+
+            <button id="spell-reinforce" class="spell-btn" title="指定した道の上に精鋭の精霊騎士2名を16秒間召喚し、敵を足止め＆迎撃！(キー: E)">
+              <div class="spell-icon">🛡️</div>
+              <div class="spell-info">
+                <span class="spell-name">精霊騎士召喚</span>
+                <span class="spell-status" id="spell-reinforce-cd">READY</span>
+              </div>
+              <span class="key-badge">E</span>
+              <div class="spell-cooldown-overlay" id="spell-reinforce-overlay"></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="towers-dock">
+          <div class="dock-section-title">GUARDIAN TOWERS（クリックまたは数字キー 1〜6 で配置 / 青いルーン台座で射程＆速度UP!）</div>
+          <div id="tower-shop-list" class="tower-cards-row"></div>
+        </div>
+      </footer>
+
+      <!-- Stage Select / Title Modal -->
+      <div id="modal-stage-select" class="modal-backdrop">
+        <div class="modal-card stage-select-card">
+          <div class="brand-header">
+            <div class="brand-badge">👑 FANTASY TOWER DEFENSE</div>
+            <h1 class="brand-title">POPCROWN TD</h1>
+            <p class="brand-subtitle">～精霊樹海とぷるぷるスライム防衛戦～</p>
+          </div>
+
+          <div class="stage-grid" id="stage-cards-container"></div>
+
+          <div class="guide-strip">
+            <div class="guide-item">
+              <span class="guide-icon">✨</span>
+              <div>
+                <strong>精霊のルーン台座</strong>
+                <p>マップ上の青い魔法陣にタワーを建てると<strong>射程+15%・攻撃速度+12%</strong>ボーナス！</p>
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">👑</span>
+              <div>
+                <strong>Tier 3 究極分岐進化</strong>
+                <p>各タワーは2段階強化後、<strong>極A・極Bの2つの究極形態</strong>へ分岐進化できます。</p>
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">🎈</span>
+              <div>
+                <strong>多層スライム＆属性相性</strong>
+                <p>割れると中身が飛び出す多層パフや、重装甲・飛行・回復など多彩な敵をコンボで撃破！</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-btns">
+            <button id="btn-open-codex-from-title" class="secondary-modal-btn">📖 タワー＆敵図鑑を見る</button>
+            <button id="btn-close-stage-modal" class="primary-modal-btn">⚔️ 現在のマップで戦う</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encyclopedia / Bestiary Modal -->
+      <div id="modal-codex" class="modal-backdrop hidden">
+        <div class="modal-card codex-card">
+          <div class="modal-top-bar">
+            <h2>📖 王国防衛図鑑（タワー＆モンスター一覧）</h2>
+            <button id="btn-close-codex" class="close-x-btn">✕</button>
+          </div>
+          <div class="codex-tabs">
+            <button id="tab-codex-towers" class="codex-tab active">🏰 ガーディアンタワー (6種)</button>
+            <button id="tab-codex-enemies" class="codex-tab">👾 パフモンスター (11種)</button>
+          </div>
+          <div id="codex-content" class="codex-grid"></div>
+        </div>
+      </div>
+
+      <!-- Victory / Game Over Modal -->
+      <div id="modal-game-end" class="modal-backdrop hidden">
+        <div class="modal-card end-card">
+          <div id="end-badge" class="end-icon">🏆</div>
+          <h2 id="end-title">VICTORY!</h2>
+          <p id="end-desc">見事、全15ウェーブの侵攻から王国のクリスタルを守り抜きました！</p>
+          <div id="end-stats" class="end-stats-box"></div>
+          <div class="modal-footer-btns">
+            <button id="btn-end-stage-select" class="secondary-modal-btn">🗺️ 別のステージへ</button>
+            <button id="btn-end-retry" class="secondary-modal-btn">🔄 最初からやり直す</button>
+            <button id="btn-end-endless" class="primary-modal-btn">🔥 無限モード(WAVE 16+)へ突入！</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
